@@ -1,0 +1,38 @@
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: demo-app
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo-app-deployment
+  autoscalerRef:
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    name: demo-app-hpa
+  service:
+    port: 8080
+    hosts:
+      - a29c448493955e190.awsglobalaccelerator.com
+    gatewayRefs:
+      - name: contour
+        namespace: projectcontour
+  analysis:
+    interval: 30s
+    threshold: 10
+    maxWeight: 50
+    stepWeight: 10
+    metrics:
+      - name: error-rate
+        templateRef:
+          name: error-rate
+        thresholdRange:
+          max: 0
+        interval: 1m
+    webhooks:
+      - name: load-test
+        url: http://loadtester.projectcontour/
+        timeout: 5s
+        metadata:
+          cmd: "hey -z 2m -q 10 -c 2 -host a29c448493955e190.awsglobalaccelerator.com http://contour-envoy.projectcontour/"
