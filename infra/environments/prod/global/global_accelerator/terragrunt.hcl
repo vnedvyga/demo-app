@@ -45,7 +45,7 @@ inputs = {
           }]
         }
         west = {
-          endpoint_group_region         = dependency.central_endpoint.outputs.aws_region
+          endpoint_group_region         = dependency.west_endpoint.outputs.aws_region
           health_check_port             = 80
           health_check_protocol         = "HTTP"
           health_check_path             = "/"
