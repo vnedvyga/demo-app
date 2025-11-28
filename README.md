@@ -11,7 +11,7 @@
 
 ### Infrastructure
 ##### Terragrunt
-- [Terragrunt units](https://github.com/vnedvyga/demo-app/tree/main/infra/environments/prod) for two regions deploy following resources from public modules: vpc, eks, ecr
+- [Terragrunt units](https://github.com/vnedvyga/demo-app/tree/main/infra/environments/prod) deploy following resources from public modules on two regions : vpc, eks, ecr
 - [Global Terragrunt units](https://github.com/vnedvyga/demo-app/tree/main/infra/environments/prod/global) deploy following resources from public modules: global accelerator
 - [Terragrunt unit's common (across units) configuration](https://github.com/vnedvyga/demo-app/tree/main/infra/environments/_common)
 ###### Areas for improvement
@@ -101,7 +101,7 @@ GitOps deployment with Flux and Kustomize:
 - [Environment overlay](https://github.com/vnedvyga/demo-app/tree/main/deploy/apps/production)
 - [Flux monitored clusters](https://github.com/vnedvyga/demo-app/tree/main/deploy/clusters/)
 
-[Canary deployments](https://github.com/vnedvyga/demo-app/blob/main/deploy/apps/base/demo-app/canary.yaml) are performed with analysis based on _error-rate_ metric (provided from api-gateway's envoy), collected from _prometheus_ deployed by _flagger_ (canary deployment engine)
+[Canary deployments](https://github.com/vnedvyga/demo-app/blob/main/deploy/apps/base/demo-app/canary.yaml) are performed with analysis based on _error-rate_ [metric](https://github.com/vnedvyga/demo-app/blob/main/deploy/apps/base/demo-app/metrics.yaml) (provided from api-gateway's envoy), collected from _prometheus_ deployed by _flagger_ (canary deployment engine)
 
 ### App 
 Simple [Go web app](https://github.com/vnedvyga/demo-app/tree/main/demo-app), provides a number of endpoints to help with canary or DR checks:
