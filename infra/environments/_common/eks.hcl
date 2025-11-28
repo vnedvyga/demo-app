@@ -40,35 +40,6 @@ inputs = {
     }
   }
 
-  access_entries = {
-    githubworker = {
-      principal_arn = "arn:aws:iam::488639172435:role/githubworker"
-      policy_associations = {
-        admin = {
-          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type       = "cluster"
-          }
-        }
-      }
-    }
-    local = {
-      principal_arn = "arn:aws:iam::488639172435:user/terraform"
-      policy_associations = {
-        admin = {
-          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type       = "cluster"
-          }
-        }
-      }
-    }
-  }
-
-  kms_key_administrators = [
-    "arn:aws:iam::488639172435:user/terraform"
-  ]
-
   tags = {
     Environment = local.env
     Terraform   = "true"
