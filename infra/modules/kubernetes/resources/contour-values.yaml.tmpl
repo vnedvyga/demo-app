@@ -1,0 +1,13 @@
+gatewayAPI:
+  manageCRDs: true
+
+configInline:
+  gateway:
+    gatewayRef:
+      name: ${agw_name}
+      namespace: ${agw_namespace}
+
+envoy:
+  service:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb

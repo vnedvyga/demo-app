@@ -1,0 +1,4 @@
+apiVersion: v2
+name: api-gateway
+version: 0.0.1
+description: Installs GatewayClass and Gateway resources to be used with Contour API Gateway

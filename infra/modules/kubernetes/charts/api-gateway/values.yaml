@@ -1,0 +1,7 @@
+## @param name specifies API Gateway and GatewayClass name
+##
+name: "contour"
+
+## @param controllerName specifies the name of a controller that implements Gateways
+##
+controllerName: "projectcontour.io/gateway-controller"
