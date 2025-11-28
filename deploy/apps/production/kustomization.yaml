@@ -3,7 +3,7 @@ kind: Kustomization
 resources:
 - ../base/demo-app
 images:
-- digest: sha256:04b515411fb70b3a812c085111e4de4028a86c034e461ecfb652ccfb4976c4a8
+- digest: sha256:7c6d524fc59220c0ef377a5511e33f912dffb8a77a4afde14a0af2b508d832ac
   name: 488639172435.dkr.ecr.eu-central-1.amazonaws.com/demo-app
 replacements:
 - source:
