@@ -1,0 +1,77 @@
+name: Infra PR Flow
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "infra/environments/**"
+
+permissions:
+  id-token: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    name: Prepare PR Flow
+    outputs:
+      changed_units: ${{ steps.changes.outputs.changed-units }}
+      destroyed_units: ${{ steps.changes.outputs.destroyed-units }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Get changed files
+        id: changes
+        uses: ./.github/actions/get-infra-changes
+        with:
+          old-ref: 'HEAD^1'
+          new-ref: 'HEAD'
+          source-path: 'infra/environments/'
+          commons-source-path: 'infra/environments/_common'
+
+  plan:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.changed_units != '[]' }}
+    runs-on: ubuntu-latest
+    name: Terragrunt Plan
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJson(needs.prepare.outputs.changed_units) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terragrunt
+        uses: ./.github/actions/setup-terragrunt
+
+      - name: Run terragrunt plan
+        working-directory: ${{ matrix.unit }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          terragrunt plan -input=false -out=$(pwd)/tfplan.bin
+
+  plan_destroy:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.destroyed_units != '[]' }}
+    runs-on: ubuntu-latest
+    name: Terragrunt Destroy Plan
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJson(needs.prepare.outputs.destroyed_units) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - name: Set up Terragrunt
+        uses: ./.github/actions/setup-terragrunt
+
+      - name: Run terragrunt plan
+        working-directory: ${{ matrix.unit }}
+        run: |
+          terragrunt plan --destroy

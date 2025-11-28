@@ -1,0 +1,49 @@
+name: 'Get infra changes'
+description: 'Return list of terragrunt units that were changed between two refs'
+inputs:
+  old-ref:
+    description: 'Previous reference to compare terragrunt file changes to'
+    required: true
+    default: ${{ github.event.before }}
+  new-ref:
+    description: 'Current reference to compare terragrunt file changes to'
+    required: true
+    default: ${{ github.event.after }}
+  source-path:
+    description: 'Path to terragrunt units'
+    required: true
+  commons-source-path:
+    description: 'Path to terragrunt common templates'
+    required: true
+outputs:
+  changed-units:
+    description: "List of changed terragrunt units (folders)"
+    value: ${{ steps.changes.outputs.changed_units }}
+  destroyed-units:
+    description: "List of destroyed terragrunt units (folders)"
+    value: ${{ steps.changes.outputs.destroyed_units }}
+runs:
+  using: "composite"
+  steps:
+    - name: Get changed terragrunt files
+      shell: bash
+      id: changes
+      run: |
+        # List of changed units (folders with "terragrunt.hcl")
+        CHANGED_UNITS=$(git diff --name-status --no-renames ${{ inputs.old-ref }} ${{ inputs.new-ref }} -- ${{ inputs.source-path }} |
+                        awk '$1 != "D" {print $2}' | xargs --no-run-if-empty dirname |
+                        xargs -I {} find {} -maxdepth 1 -type f -name "terragrunt.hcl" -exec echo {} \;)
+        # List of units that depend on terragrunt common file changes
+        COMMON_UNITS=$(git diff --name-only  ${{ inputs.old-ref }} ${{ inputs.new-ref }} -- ${{ inputs.commons-source-path }} |
+                        xargs --no-run-if-empty -n 1 basename | sed 's:\.hcl$::' | xargs -I {} find ${{ inputs.source-path }} -type d -name {};)
+        CHANGED_UNITS_JSON=$(jq --arg var1 "$CHANGED_UNITS" --arg var2 "$COMMON_UNITS" '[($var1 | split("\n")), ($var2 | split("\n"))] |
+                             add | unique' <<< '{}' | jq -c .)
+        echo "Changed units: "$CHANGED_UNITS_JSON""
+        echo "changed_units=$CHANGED_UNITS_JSON" >> "$GITHUB_OUTPUT"
+
+        # Just the list of folders where "terragrunt.hcl" file was removed - means units will be destroyed
+        DESTROYED_UNITS=$(git diff --name-status --no-renames ${{ inputs.old-ref }} ${{ inputs.new-ref }} -- ${{ inputs.source-path }} |
+                          awk '$1 == "D" {print $2}' | grep "terragrunt.hcl$" | xargs --no-run-if-empty dirname) || true
+        DESTROYED_UNITS_JSON=$(echo "$DESTROYED_UNITS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        echo "Destroyed units: ${DESTROYED_UNITS_JSON}"
+        echo "destroyed_units=$DESTROYED_UNITS_JSON" >> "$GITHUB_OUTPUT"

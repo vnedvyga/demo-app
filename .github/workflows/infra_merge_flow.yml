@@ -1,0 +1,82 @@
+name: Infra Merge Flow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/environments/**"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    name: Prepare Merge Flow
+    outputs:
+      changed_units: ${{ steps.changes.outputs.changed-units }}
+      destroyed_units: ${{ steps.changes.outputs.destroyed-units }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get changed files
+        run: |
+          # Previous commit is required to figure out what terragrunt unit have been changed in the next step.
+          # Git checkout step is shallow and we don't want to pull whole history.
+          git fetch origin ${{ github.event.before }}
+      - name: Get changed files
+        id: changes
+        uses: ./.github/actions/get-infra-changes
+        with:
+          source-path: 'infra/environments/'
+          commons-source-path: 'infra/environments/_common'
+
+  apply:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.changed_units != '[]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    name: Terragrunt Apply
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJson(needs.prepare.outputs.changed_units) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terragrunt
+        uses: ./.github/actions/setup-terragrunt
+
+      - name: Run terragrunt apply
+        working-directory: ${{ matrix.unit }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          terragrunt backend bootstrap
+          terragrunt apply -auto-approve -input=false
+
+  destroy:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.destroyed_units != '[]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    name: Terragrunt Destroy
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJson(needs.prepare.outputs.destroyed_units) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.before }}
+
+      - name: Set up Terragrunt
+        uses: ./.github/actions/setup-terragrunt
+
+      - name: Run terragrunt apply
+        working-directory: ${{ matrix.unit }}
+        run: |
+          terragrunt destroy --auto-approve
+          terragrunt backend delete --non-interactive

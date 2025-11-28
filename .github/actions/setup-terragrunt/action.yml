@@ -1,0 +1,23 @@
+name: 'Set up Terragrunt'
+description: 'Installs terragrunt and all dependencies, authenticates to AWS'
+runs:
+  using: "composite"
+  steps:
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: '1.14.0'
+
+    - name: Install Terragrunt
+      shell: bash
+      run: |
+        curl -sLo terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v0.93.10/terragrunt_linux_amd64
+        chmod +x terragrunt
+        sudo mv terragrunt /usr/local/bin/terragrunt
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+      with:
+        role-to-assume: arn:aws:iam::488639172435:role/githubworker
+        role-session-name: samplerolesession
+        aws-region: eu-central-1

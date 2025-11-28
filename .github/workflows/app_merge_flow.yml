@@ -1,0 +1,78 @@
+name: Demo-app Merge Flow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "demo-app/**"
+
+permissions:
+  id-token: write
+  contents: write
+
+env:
+  REPO_NAME: demo-app
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build and test demo-app image
+    defaults:
+      run:
+        working-directory: demo-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: demo-app/go.sum
+
+      - name: Run vet
+        run: go vet -v ./...
+
+      - name: Run tests
+        run: go test -v ./...
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::488639172435:role/githubworker
+          aws-region: eu-central-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: image-metadata
+        uses: docker/metadata-action@v5.5.0
+        with:
+          images: ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}
+          tags: type=sha
+
+      - name: Build and publish
+        id: image-build
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          context: ./demo-app
+          tags: ${{ steps.image-metadata.outputs.tags }}
+
+      - name: Install kustomize
+        uses: yokawasa/action-setup-kube-tools@v0.13.1
+        with:
+          setup-tools: |
+            kustomize
+
+      - name: Update tag in manifests
+        working-directory: deploy/apps/production
+        run: |
+          kustomize edit set image ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}@${{ steps.image-build.outputs.digest }}
+          git config user.name app-merge-flow
+          git config user.email app-merge-flow@github.com
+          git add .
+          git commit -m "[CI] update image ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }} version"
+          git push
