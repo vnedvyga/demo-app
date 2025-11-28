@@ -28,7 +28,7 @@ inputs = {
       client_affinity = "SOURCE_IP"
 
       endpoint_groups = {
-        my_group = {
+        central = {
           health_check_port             = 80
           health_check_protocol         = "HTTP"
           health_check_path             = "/"
@@ -42,7 +42,19 @@ inputs = {
             client_ip_preservation_enabled = true
             endpoint_id                    = dependency.central_endpoint.outputs.apigw_lb
             weight                         = 128
-          }, {
+          }]
+        }
+        west = {
+          health_check_port             = 80
+          health_check_protocol         = "HTTP"
+          health_check_path             = "/"
+          health_check_interval_seconds = 10
+          health_check_timeout_seconds  = 5
+          healthy_threshold_count       = 2
+          unhealthy_threshold_count     = 2
+          traffic_dial_percentage       = 100
+
+          endpoint_configuration = [{
             client_ip_preservation_enabled = true
             endpoint_id                    = dependency.west_endpoint.outputs.apigw_lb
             weight                         = 128
